@@ -15,6 +15,7 @@ async function start() {
 
     const server = app.listen(
       env.PORT,
+      "0.0.0.0",
       () => {
         console.log(
           `Auth Service listening on port ${env.PORT}`

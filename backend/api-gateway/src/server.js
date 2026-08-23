@@ -1,7 +1,7 @@
 const app = require("./app");
 const { env } = require("./config/env");
 
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`API Gateway listening on port ${env.PORT}`);
 });
 

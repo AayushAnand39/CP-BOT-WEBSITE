@@ -125,6 +125,9 @@ async function submitManualProblem(input) {
         testcaseMetadata.totalBytes ?? input.testcaseJob.totalBytes ?? null,
       archiveBytes:
         testcaseMetadata.archiveBytes ?? input.testcaseJob.archiveBytes ?? null,
+      archiveKey:
+        testcaseMetadata.archiveKey || input.testcaseJob.archiveKey || null,
+      storage: testcaseMetadata.storage || input.testcaseJob.storage || null,
     },
     deterministic: true,
     status: "READY",
@@ -182,10 +185,15 @@ async function getProblemForMaintenance(problemId) {
           metadata.archiveBytes !== null && metadata.archiveBytes !== undefined,
         testCount: metadata.testCount || 0,
         archiveBytes: metadata.archiveBytes ?? null,
+        archiveKey: metadata.archiveKey || artifact?.archiveKey || null,
+        storage: metadata.storage || artifact?.storage || null,
+        remoteAvailable: metadata.remoteAvailable === true,
         message:
-          metadata.archiveBytes == null
-            ? "Testcase files exist, but testcases.zip is missing"
-            : "Testcase job and archive are available",
+          metadata.remoteAvailable === true && metadata.localAvailable === false
+            ? "Testcase artifact is safely stored in R2 and will be restored on demand"
+            : metadata.archiveBytes == null
+              ? "Testcase files exist, but testcases.zip is missing"
+              : "Testcase job and archive are available",
       };
     } catch (error) {
       if (error.statusCode === 404) {
@@ -241,6 +249,9 @@ async function rebuildProblemArchive(problemId) {
     totalBytes:
       metadata.totalBytes ?? problem.testcaseArtifactJson?.totalBytes ?? null,
     archiveBytes: metadata.archiveBytes ?? null,
+    archiveKey:
+      metadata.archiveKey || problem.testcaseArtifactJson?.archiveKey || null,
+    storage: metadata.storage || problem.testcaseArtifactJson?.storage || null,
     archiveRebuiltAt: new Date().toISOString(),
   };
 
@@ -257,10 +268,6 @@ async function rebuildProblemArchive(problemId) {
 
 async function regenerateProblemTestcases(problemId, testCount) {
   const problem = await platform.getInternalProblem(problemId);
-
-  await platform.updateProblem(problemId, {
-    status: "DRAFT",
-  });
 
   if (!problem.solutionCode) {
     throw new AppError(
@@ -308,6 +315,8 @@ async function regenerateProblemTestcases(problemId, testCount) {
     generated: metadata.generated || [],
     totalBytes: metadata.totalBytes ?? null,
     archiveBytes: metadata.archiveBytes ?? null,
+    archiveKey: metadata.archiveKey || testcaseJob.archiveKey || null,
+    storage: metadata.storage || testcaseJob.storage || null,
     regeneratedAt: new Date().toISOString(),
     previousJobId: previousArtifact?.jobId || null,
   };

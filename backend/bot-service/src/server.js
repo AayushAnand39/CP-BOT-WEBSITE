@@ -8,7 +8,7 @@ async function start() {
     await connectDatabase();
     await recoverLiveSimulationRuns();
 
-    const server = app.listen(env.PORT, () => {
+    const server = app.listen(env.PORT, "0.0.0.0", () => {
       console.log(`Bot Service listening on port ${env.PORT}`);
     });
 
