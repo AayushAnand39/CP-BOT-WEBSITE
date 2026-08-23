@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Bot {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  name             String
+  rating           Int
+  description      String?
+  enabled          Boolean  @default(true)
+  aggression       Float    @default(0.5)
+  consistency      Float    @default(0.7)
+  speed            Float    @default(0.5)
+  tagStrengths     String[] @default([])
+  tagWeaknesses    String[] @default([])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  simulationRuns   BotSimulationRun[]
+
+  @@index([rating])
+  @@index([enabled])
+  @@map("bots")
+}
+
+model BotSimulationRun {
+  id          String   @id @default(uuid())
+  botId       String
+  contestId   String
+  seed        String
+  mode        String
+  planJson    Json
+  executed          Boolean  @default(false)
+  executedEventKeys String[] @default([])
+  liveStartedAt     DateTime?
+  createdAt         DateTime @default(now())
+  executedAt        DateTime?
+  bot         Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@index([contestId])
+  @@index([botId, createdAt])
+  @@map("bot_simulation_runs")
+}

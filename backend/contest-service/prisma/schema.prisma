@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContestStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  ENDED
+  CANCELLED
+}
+
+enum ParticipantType {
+  USER
+  BOT
+}
+
+enum SubmissionVerdict {
+  PENDING
+  AC
+  WA
+  TLE
+  MLE
+  RE
+  CE
+}
+
+enum ChallengeStatus {
+  PREPARING
+  RUNNING
+  ENDED
+  CANCELLED
+  FAILED
+}
+
+model Contest {
+  id              String               @id @default(uuid())
+  name            String
+  description     String?
+  seed            BigInt
+  difficultyMin   Int
+  difficultyMax   Int
+  problemCount    Int
+  durationSeconds Int
+  startsAt        DateTime?
+  endsAt          DateTime?
+  status          ContestStatus        @default(DRAFT)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  problems        ContestProblem[]
+  participants    ContestParticipant[]
+  submissions     Submission[]
+  challenge       BotChallenge?
+
+  @@index([status])
+  @@index([startsAt])
+  @@map("contests")
+}
+
+model ContestProblem {
+  id            String      @id @default(uuid())
+  contestId     String
+  problemId     String
+  ordinal       Int
+  problemRating Int
+  createdAt     DateTime    @default(now())
+  contest       Contest     @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  submissions   Submission[]
+
+  @@unique([contestId, problemId])
+  @@unique([contestId, ordinal])
+  @@index([problemId])
+  @@map("contest_problems")
+}
+
+model ContestParticipant {
+  id            String          @id @default(uuid())
+  contestId     String
+  participantId String
+  type          ParticipantType @default(USER)
+  joinedAt      DateTime        @default(now())
+  score         Int             @default(0)
+  penalty       Int             @default(0)
+  rank          Int?
+  contest       Contest         @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  submissions   Submission[]
+
+  @@unique([contestId, participantId, type])
+  @@index([participantId])
+  @@map("contest_participants")
+}
+
+model Submission {
+  id              String            @id @default(uuid())
+  contestId       String
+  participantRowId String
+  problemId       String
+  sourceCode      String
+  language        String
+  verdict         SubmissionVerdict @default(PENDING)
+  score           Int               @default(0)
+  executionTimeMs Int?
+  testResultsJson Json?
+  submittedAt     DateTime          @default(now())
+  judgedAt        DateTime?
+  contest         Contest           @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  participant     ContestParticipant @relation(fields: [participantRowId], references: [id], onDelete: Cascade)
+  contestProblem  ContestProblem    @relation(fields: [contestId, problemId], references: [contestId, problemId], onDelete: Cascade)
+
+  @@index([contestId, participantRowId])
+  @@index([contestId, problemId])
+  @@map("submissions")
+}
+
+
+model BotChallenge {
+  id               String          @id @default(uuid())
+  contestId        String          @unique
+  userId           String
+  botId            String
+  botRating        Int
+  simulationRunId  String?         @unique
+  status           ChallengeStatus @default(PREPARING)
+  outcome          String?
+  resultEventId    String?         @unique
+  ratingBefore     Int?
+  ratingAfter      Int?
+  ratingDelta      Int?
+  resultAppliedAt  DateTime?
+  completedAt      DateTime?
+  failureReason    String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  contest          Contest         @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([botId])
+  @@index([status])
+  @@map("bot_challenges")
+}

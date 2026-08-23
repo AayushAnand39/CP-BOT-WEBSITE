@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String            @id
+  username    String            @unique
+  displayName String?
+  bio         String?           @db.VarChar(500)
+  rating      Int               @default(1200)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  stats       UserStats?
+  preferences UserPreferences?
+  events      UserCompetitiveEvent[]
+
+  @@index([rating])
+  @@map("users")
+}
+
+model UserStats {
+  userId              String   @id
+  problemsSolved      Int      @default(0)
+  problemsAttempted   Int      @default(0)
+  contestsPlayed      Int      @default(0)
+  contestsWon         Int      @default(0)
+  botChallenges       Int      @default(0)
+  botWins             Int      @default(0)
+  submissions         Int      @default(0)
+  acceptedSubmissions Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
+}
+
+model UserPreferences {
+  userId            String   @id
+  preferredLanguage String   @default("cpp")
+  theme             String   @default("system")
+  showProfilePublic Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model UserCompetitiveEvent {
+  eventId            String   @id
+  userId             String
+  eventType          String
+  opponentRating     Int?
+  result              String?
+  ratingBefore        Int
+  ratingAfter         Int
+  ratingDelta         Int
+  statsDeltaJson      Json
+  createdAt           DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([eventType])
+  @@map("user_competitive_events")
+}

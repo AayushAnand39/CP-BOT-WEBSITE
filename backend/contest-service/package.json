@@ -1,0 +1,29 @@
+{
+  "name": "cp-bot-contest-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contest orchestration microservice for the CP Bot Platform",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.14.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.0.15"
+  },
+  "devDependencies": {
+    "prisma": "^6.14.0",
+    "supertest": "^7.1.4"
+  },
+  "engines": { "node": ">=20" }
+}

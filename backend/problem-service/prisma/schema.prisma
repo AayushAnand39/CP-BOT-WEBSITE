@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProblemStatus {
+  DRAFT
+  READY
+  DISABLED
+}
+
+enum SolutionSource {
+  EDITORIAL
+  CURATED
+  EXTERNAL
+  AI_GENERATED
+}
+
+model Problem {
+  id                   String          @id @default(uuid())
+  source               String          @default("codeforces")
+  sourceContestId      Int?
+  sourceIndex          String?
+  title                String
+  rating               Int?
+  tags                 String[]
+  concepts             String[]
+  statement            String
+  inputFormat          String?
+  outputFormat         String?
+  constraints          String?
+  examplesJson         Json?
+  notes                String?
+  editorial            String?
+  timeLimitMs          Int
+  memoryLimitMb        Int
+  solutionCode         String?
+  solutionSource       SolutionSource?
+  solutionSourceRef    String?
+  generatorCode        String?
+  generatorVersion     Int?
+  generatorHash        String?
+  testcaseArtifactJson Json?
+  deterministic        Boolean         @default(false)
+  status               ProblemStatus   @default(DRAFT)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@unique([source, sourceContestId, sourceIndex])
+  @@index([rating])
+  @@index([status, deterministic])
+  @@index([sourceContestId, sourceIndex])
+  @@map("problems")
+}

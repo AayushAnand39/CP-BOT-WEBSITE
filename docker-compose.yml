@@ -1,0 +1,253 @@
+name: cp-bot-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - cpbot-postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    ports:
+      # Localhost only, intentionally 5433 so it does not clash with the
+      # manually-created cpbot-postgres container you may already have on 5432.
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    networks:
+      - cpbot-private
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/cpbot_auth?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      USER_SERVICE_URL: http://user-service:4002
+      TRUST_PROXY: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "4001"
+    networks:
+      - cpbot-private
+
+  user-service:
+    build:
+      context: ./backend/user-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4002
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/cpbot_user?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "4002"
+    networks:
+      - cpbot-private
+
+  problem-service:
+    build:
+      context: ./backend/problem-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4003
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/cpbot_problem?schema=public
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "4003"
+    networks:
+      - cpbot-private
+
+  contest-service:
+    build:
+      context: ./backend/contest-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4004
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/cpbot_contest?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      PROBLEM_SERVICE_URL: http://problem-service:4003
+      JUDGE_SERVICE_URL: http://judge-service:4007
+      TESTCASE_SERVICE_URL: http://testcase-service:4006
+      BOT_SERVICE_URL: http://bot-service:4005
+      USER_SERVICE_URL: http://user-service:4002
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-180000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      problem-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      judge-service:
+        condition: service_started
+      testcase-service:
+        condition: service_started
+    expose:
+      - "4004"
+    networks:
+      - cpbot-private
+
+  bot-service:
+    build:
+      context: ./backend/bot-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4005
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/cpbot_bot?schema=public
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CONTEST_SERVICE_URL: http://contest-service:4004
+      PROBLEM_SERVICE_URL: http://problem-service:4003
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-15000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      contest-service:
+        condition: service_started
+      problem-service:
+        condition: service_started
+    expose:
+      - "4005"
+    networks:
+      - cpbot-private
+
+  testcase-service:
+    build:
+      context: ./backend/testcase-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4006
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    expose:
+      - "4006"
+    volumes:
+      - cpbot-testcase-runtime:/app/runtime
+    networks:
+      - cpbot-private
+
+  judge-service:
+    build:
+      context: ./backend/judge-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4007
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      COMPILE_TIMEOUT_MS: ${JUDGE_COMPILE_TIMEOUT_MS:-180000}
+      EXECUTION_TIMEOUT_MS: ${JUDGE_EXECUTION_TIMEOUT_MS:-3000}
+    expose:
+      - "4007"
+    volumes:
+      - cpbot-judge-runtime:/app/runtime
+    networks:
+      - cpbot-private
+
+  ai-service:
+    build:
+      context: ./backend/ai-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4008
+      ADMIN_ORCHESTRATION_TOKEN: ${ADMIN_ORCHESTRATION_TOKEN}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      PROBLEM_SERVICE_URL: http://problem-service:4003
+      TESTCASE_SERVICE_URL: http://testcase-service:4006
+      JUDGE_SERVICE_URL: http://judge-service:4007
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-20000}
+    depends_on:
+      problem-service:
+        condition: service_started
+      testcase-service:
+        condition: service_started
+      judge-service:
+        condition: service_started
+    expose:
+      - "4008"
+    networks:
+      - cpbot-private
+
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: http://auth-service:4001
+      USER_SERVICE_URL: http://user-service:4002
+      PROBLEM_SERVICE_URL: http://problem-service:4003
+      CONTEST_SERVICE_URL: http://contest-service:4004
+      BOT_SERVICE_URL: http://bot-service:4005
+      AI_SERVICE_URL: http://ai-service:4008
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      ADMIN_ORCHESTRATION_TOKEN: ${ADMIN_ORCHESTRATION_TOKEN}
+      CORS_ORIGINS: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-15000}
+      GLOBAL_RATE_LIMIT_WINDOW_MS: ${GLOBAL_RATE_LIMIT_WINDOW_MS:-60000}
+      GLOBAL_RATE_LIMIT_MAX: ${GLOBAL_RATE_LIMIT_MAX:-300}
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-60}
+      TRUST_PROXY: "false"
+    depends_on:
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      problem-service:
+        condition: service_started
+      contest-service:
+        condition: service_started
+      bot-service:
+        condition: service_started
+      ai-service:
+        condition: service_started
+    ports:
+      - "4000:4000"
+    networks:
+      - cpbot-private
+
+networks:
+  cpbot-private:
+    driver: bridge
+
+volumes:
+  cpbot-postgres-data:
+  cpbot-testcase-runtime:
+  cpbot-judge-runtime:
