@@ -1,10 +1,7 @@
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const { env } = require("../config/env");
 
-function createServiceProxy({
-  target,
-  serviceName
-}) {
+function createServiceProxy({ target, serviceName }) {
   return createProxyMiddleware({
     target,
     changeOrigin: true,
@@ -30,19 +27,29 @@ function createServiceProxy({
       },
 
       error(err, req, res) {
+        console.error("[GATEWAY UPSTREAM ERROR]", {
+          service: serviceName,
+          target,
+          method: req.method,
+          path: req.originalUrl,
+          code: err?.code,
+          message: err?.message,
+          requestId: req.id,
+        });
+
         if (res.headersSent) return;
 
         res.status(502).json({
           success: false,
           message: `${serviceName} is unavailable`,
           code: "UPSTREAM_UNAVAILABLE",
-          requestId: req.id
+          requestId: req.id,
         });
-      }
-    }
+      },
+    },
   });
 }
 
 module.exports = {
-  createServiceProxy
+  createServiceProxy,
 };
