@@ -14,7 +14,7 @@ const s = z.object({
     .int()
     .positive()
     .default(900000),
-  PROBLEM_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  PROBLEM_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5000),
   TRUST_PROXY: z.enum(["true", "false"]).default("true"),
 });
 const p = s.safeParse(process.env);

@@ -1,1 +1,51 @@
-const express=require('express');const cors=require('cors');const helmet=require('helmet');const rateLimit=require('express-rate-limit');const crypto=require('crypto');const {env,corsOrigins}=require('./config/env');const routes=require('./routes/problem.routes');const {notFoundHandler,errorHandler}=require('./middleware/error.middleware');const app=express();if(env.TRUST_PROXY==='true')app.set('trust proxy',1);app.disable('x-powered-by');app.use(helmet());app.use(cors({origin(o,cb){if(!o||corsOrigins.includes(o))return cb(null,true);cb(new Error('Origin not allowed by CORS'));}}));app.use(express.json({limit:'10mb'}));app.use((req,res,next)=>{const id=req.header('x-request-id')||crypto.randomUUID();req.id=id;res.setHeader('x-request-id',id);next();});app.get('/health',(_q,s)=>s.json({success:true,service:'problem-service',status:'ok'}));app.use('/api/v1/problems',rateLimit({windowMs:env.PROBLEM_RATE_LIMIT_WINDOW_MS,limit:env.PROBLEM_RATE_LIMIT_MAX,standardHeaders:'draft-8',legacyHeaders:false,message:{success:false,message:'Too many problem-service requests. Please try again later.',code:'PROBLEM_RATE_LIMITED'}}),routes);app.use(notFoundHandler);app.use(errorHandler);module.exports=app;
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
+const { env, corsOrigins } = require("./config/env");
+const routes = require("./routes/problem.routes");
+const {
+  notFoundHandler,
+  errorHandler,
+} = require("./middleware/error.middleware");
+const app = express();
+if (env.TRUST_PROXY === "true") app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use(helmet());
+app.use(
+  cors({
+    origin(o, cb) {
+      if (!o || corsOrigins.includes(o)) return cb(null, true);
+      cb(new Error("Origin not allowed by CORS"));
+    },
+  }),
+);
+app.use(express.json({ limit: "10mb" }));
+app.use((req, res, next) => {
+  const id = req.header("x-request-id") || crypto.randomUUID();
+  req.id = id;
+  res.setHeader("x-request-id", id);
+  next();
+});
+app.get("/health", (_q, s) =>
+  s.json({ success: true, service: "problem-service", status: "ok" }),
+);
+app.use(
+  "/api/v1/problems",
+  rateLimit({
+    windowMs: env.PROBLEM_RATE_LIMIT_WINDOW_MS,
+    limit: env.PROBLEM_RATE_LIMIT_MAX,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: "Too many problem-service requests. Please try again later.",
+      code: "PROBLEM_RATE_LIMITED",
+    },
+  }),
+  routes,
+);
+app.use(notFoundHandler);
+app.use(errorHandler);
+module.exports = app;
