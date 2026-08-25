@@ -25,8 +25,8 @@ const schema = z.object({
   GLOBAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5000),
 
-  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
-  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
 
   TRUST_PROXY: z.enum(["true", "false"]).default("true")
 });
