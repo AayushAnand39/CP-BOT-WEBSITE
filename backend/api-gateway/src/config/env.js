@@ -23,7 +23,7 @@ const schema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
 
   GLOBAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
-  GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5000),
 
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
