@@ -12,7 +12,7 @@ const schema = z.object({
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
   USER_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   USER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(200),
-  TRUST_PROXY: z.enum(["true", "false"]).default("false"),
+  TRUST_PROXY: z.enum(["true", "false"]).default("true"),
 });
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {

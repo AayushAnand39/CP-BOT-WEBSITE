@@ -6,13 +6,10 @@ async function applyChallengeResult({
   eventId,
   opponentRating,
   result,
-  statsDelta
+  statsDelta,
 }) {
   const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(),
-    env.REQUEST_TIMEOUT_MS
-  );
+  const timer = setTimeout(() => controller.abort(), env.REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(
@@ -22,15 +19,15 @@ async function applyChallengeResult({
         signal: controller.signal,
         headers: {
           "content-type": "application/json",
-          "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN
+          "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
         },
         body: JSON.stringify({
           eventId,
           opponentRating,
           result,
-          statsDelta
-        })
-      }
+          statsDelta,
+        }),
+      },
     );
 
     const body = await response.json().catch(() => ({}));
@@ -40,18 +37,23 @@ async function applyChallengeResult({
         response.status >= 500 ? 502 : response.status,
         body.message || "User Service challenge-result update failed",
         body.code || "USER_SERVICE_ERROR",
-        body.details
+        body.details,
       );
     }
 
     return body.data;
   } catch (error) {
     if (error instanceof AppError) throw error;
-
+    console.error("[AUTH -> USER ERROR]", {
+      url: env.USER_SERVICE_URL,
+      name: error?.name,
+      message: error?.message,
+      cause: error?.cause,
+    });
     throw new AppError(
       502,
       "User Service unavailable",
-      "USER_SERVICE_UNAVAILABLE"
+      "USER_SERVICE_UNAVAILABLE",
     );
   } finally {
     clearTimeout(timer);
@@ -59,5 +61,5 @@ async function applyChallengeResult({
 }
 
 module.exports = {
-  applyChallengeResult
+  applyChallengeResult,
 };

@@ -11,9 +11,11 @@ async function request(path, { internal = false, ...options } = {}) {
       signal: controller.signal,
       headers: {
         "content-type": "application/json",
-        ...(internal ? { "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN } : {}),
-        ...(options.headers || {})
-      }
+        ...(internal
+          ? { "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN }
+          : {}),
+        ...(options.headers || {}),
+      },
     });
 
     const body = await response.json().catch(() => ({}));
@@ -22,14 +24,36 @@ async function request(path, { internal = false, ...options } = {}) {
         response.status >= 500 ? 502 : response.status,
         body.message || "Problem Service request failed",
         body.code || "PROBLEM_SERVICE_ERROR",
-        { status: response.status, details: body.details }
+        { status: response.status, details: body.details },
       );
     }
 
     return body.data ?? body;
   } catch (error) {
-    if (error instanceof AppError) throw error;
-    throw new AppError(502, "Problem Service unavailable", "PROBLEM_SERVICE_UNAVAILABLE");
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    if (error?.name === "AbortError") {
+      throw new AppError(
+        504,
+        "Problem Service timed out",
+        "PROBLEM_SERVICE_TIMEOUT",
+      );
+    }
+
+    console.error("[CONTEST -> PROBLEM ERROR]", {
+      url: `${env.PROBLEM_SERVICE_URL}${path}`,
+      name: error?.name,
+      message: error?.message,
+      cause: error?.cause,
+    });
+
+    throw new AppError(
+      502,
+      "Problem Service unavailable",
+      "PROBLEM_SERVICE_UNAVAILABLE",
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -41,21 +65,23 @@ async function getEligibleProblems({ ratingMin, ratingMax }) {
     deterministic: "true",
     ratingMin: String(ratingMin),
     ratingMax: String(ratingMax),
-    pageSize: "100"
+    pageSize: "100",
   });
   const data = await request(`/api/v1/problems?${qs}`);
-  return Array.isArray(data) ? data : (data.items || data.problems || []);
+  return Array.isArray(data) ? data : data.items || data.problems || [];
 }
 
 async function getProblemPublic(problemId) {
-  const data = await request(`/api/v1/problems/${encodeURIComponent(problemId)}`);
+  const data = await request(
+    `/api/v1/problems/${encodeURIComponent(problemId)}`,
+  );
   return data.problem || data;
 }
 
 async function getProblemInternal(problemId) {
   const data = await request(
     `/api/v1/problems/internal/${encodeURIComponent(problemId)}`,
-    { internal: true }
+    { internal: true },
   );
   return data.problem || data;
 }

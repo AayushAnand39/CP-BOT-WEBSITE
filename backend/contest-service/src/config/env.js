@@ -13,7 +13,7 @@ const schema = z.object({
   BOT_SERVICE_URL: z.string().url().default("http://localhost:4005"),
   USER_SERVICE_URL: z.string().url().default("http://localhost:4002"),
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000)
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(120000)
 });
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {

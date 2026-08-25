@@ -31,7 +31,7 @@ const envSchema = z.object({
   COMPILE_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
   GENERATOR_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
   SOLUTION_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
-  TRUST_PROXY: z.enum(["true", "false"]).default("false"),
+  TRUST_PROXY: z.enum(["true", "false"]).default("true"),
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

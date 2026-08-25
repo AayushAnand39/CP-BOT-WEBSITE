@@ -18,7 +18,7 @@ const schema = z.object({
   GROQ_BASE_URL: z.string().url().default("https://api.groq.com/openai/v1"),
   GROQ_MODEL: z.string().min(1).default("openai/gpt-oss-120b"),
 
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
   TESTCASE_GENERATION_TIMEOUT_MS: z.coerce.number().int().positive().default(300000),
   CODEFORCES_API_GAP_MS: z.coerce.number().int().min(2000).default(2100),
   CODEFORCES_STATUS_PAGES: z.coerce.number().int().min(1).max(20).default(5),

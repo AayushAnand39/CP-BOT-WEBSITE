@@ -12,7 +12,7 @@ const schema = z.object({
   PROBLEM_SERVICE_URL: z.string().url().default("http://localhost:4003"),
   AI_SERVICE_URL: z.string().url().default("http://localhost:4008"),
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
   BOT_AI_TIMEOUT_MS: z.coerce.number().int().positive().default(45000)
 });
 

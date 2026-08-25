@@ -16,7 +16,7 @@ const envSchema = z.object({
 
   INTERNAL_SERVICE_TOKEN: z.string().min(16),
 
-  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(120000),
 
   JWT_SECRET: z.string().min(32),
 
@@ -32,7 +32,7 @@ const envSchema = z.object({
 
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 
-  TRUST_PROXY: z.enum(["true", "false"]).default("false"),
+  TRUST_PROXY: z.enum(["true", "false"]).default("true"),
 });
 
 const parsed = envSchema.safeParse(process.env);
