@@ -37,14 +37,26 @@ function createServiceProxy({ target, serviceName }) {
           requestId: req.id,
         });
 
-        if (res.headersSent) return;
+        if (res.headersSent) {
+          try {
+            res.end();
+          } catch {}
+          return;
+        }
 
-        res.status(502).json({
+        const payload = JSON.stringify({
           success: false,
           message: `${serviceName} is unavailable`,
           code: "UPSTREAM_UNAVAILABLE",
           requestId: req.id,
         });
+
+        res.writeHead(502, {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        });
+
+        res.end(payload);
       },
     },
   });
