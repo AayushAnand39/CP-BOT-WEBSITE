@@ -37,6 +37,43 @@ const botProxy = createServiceProxy({
   serviceName: "Bot Service",
 });
 
+const adminMaintenanceProxy = createProxyMiddleware({
+  target: env.AI_SERVICE_URL,
+  changeOrigin: true,
+
+  proxyTimeout: env.REQUEST_TIMEOUT_MS,
+  timeout: env.REQUEST_TIMEOUT_MS,
+
+  pathRewrite(path, req) {
+    const base = `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`;
+
+    if (path.endsWith("/rebuild-archive")) {
+      return `${base}/rebuild-archive`;
+    }
+
+    if (path.endsWith("/regenerate-testcases")) {
+      return `${base}/regenerate-testcases`;
+    }
+
+    return base;
+  },
+
+  on: {
+    proxyReq(proxyReq, req) {
+      proxyReq.setHeader(
+        "x-admin-orchestration-token",
+        env.ADMIN_ORCHESTRATION_TOKEN,
+      );
+
+      proxyReq.setHeader("x-admin-user-id", req.auth.userId);
+
+      if (req.auth.email) {
+        proxyReq.setHeader("x-admin-user-email", req.auth.email);
+      }
+    },
+  },
+});
+
 // ---------- Auth Service ----------
 // Auth Service owns credential verification. Register/login stay public.
 // /me is protected at both the Gateway and Auth Service.
@@ -53,6 +90,8 @@ function adminAiProxy(targetPath) {
   return createProxyMiddleware({
     target: env.AI_SERVICE_URL,
     changeOrigin: true,
+    // proxyTimeout: env.REQUEST_TIMEOUT_MS,
+    // timeout: env.REQUEST_TIMEOUT_MS,
     pathRewrite: () => targetPath,
     on: {
       proxyReq(proxyReq, req) {
@@ -108,40 +147,31 @@ route(
   "/admin/problems/maintenance/:problemId",
   requireAuth,
   requireAdmin,
-  (req, res, next) =>
-    adminAiProxy(
-      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`,
-    )(req, res, next),
+  adminMaintenanceProxy,
 );
+
 route(
   "patch",
   "/admin/problems/maintenance/:problemId",
   requireAuth,
   requireAdmin,
-  (req, res, next) =>
-    adminAiProxy(
-      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`,
-    )(req, res, next),
+  adminMaintenanceProxy,
 );
+
 route(
   "post",
   "/admin/problems/maintenance/:problemId/rebuild-archive",
   requireAuth,
   requireAdmin,
-  (req, res, next) =>
-    adminAiProxy(
-      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}/rebuild-archive`,
-    )(req, res, next),
+  adminMaintenanceProxy,
 );
+
 route(
   "post",
   "/admin/problems/maintenance/:problemId/regenerate-testcases",
   requireAuth,
   requireAdmin,
-  (req, res, next) =>
-    adminAiProxy(
-      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}/regenerate-testcases`,
-    )(req, res, next),
+  adminMaintenanceProxy,
 );
 
 // ---------- Problem Service ----------

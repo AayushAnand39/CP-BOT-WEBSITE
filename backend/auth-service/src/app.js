@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 
 const {
@@ -61,24 +60,6 @@ app.use((req, res, next) => {
   next();
 });
 
-const authLimiter = rateLimit({
-  windowMs:
-    env.AUTH_RATE_LIMIT_WINDOW_MS,
-
-  limit:
-    env.AUTH_RATE_LIMIT_MAX,
-
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-
-  message: {
-    success: false,
-    message:
-      "Too many authentication requests. Please try again later.",
-    code: "AUTH_RATE_LIMITED"
-  }
-});
-
 app.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
@@ -89,7 +70,6 @@ app.get("/health", (_req, res) => {
 
 app.use(
   "/api/v1/auth",
-  authLimiter,
   authRoutes
 );
 
