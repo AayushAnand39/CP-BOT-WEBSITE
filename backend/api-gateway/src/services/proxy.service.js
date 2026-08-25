@@ -51,11 +51,23 @@ function createServiceProxy({ target, serviceName }) {
           requestId: req.id,
         });
 
-        res.writeHead(502, {
+        const origin = req.headers.origin;
+
+        const allowedOrigins = env.CORS_ORIGINS.split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+
+        const headers = {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(payload),
-        });
+        };
 
+        if (origin && allowedOrigins.includes(origin)) {
+          headers["Access-Control-Allow-Origin"] = origin;
+          headers["Vary"] = "Origin";
+        }
+
+        res.writeHead(502, headers);
         res.end(payload);
       },
     },
