@@ -32,30 +32,38 @@ app.use((req, res, next) => {
 app.get("/health", (_req, res) =>
   res.json({ success: true, service: "judge-service", status: "ok" }),
 );
-app.use((req, res, next) => {
-  const startedAt = Date.now();
+// app.use((req, res, next) => {
+//   const startedAt = Date.now();
 
-  console.log("[JUDGE REQUEST]", {
-    method: req.method,
-    path: req.originalUrl,
-  });
+//   console.log("[JUDGE REQUEST]", {
+//     method: req.method,
+//     path: req.originalUrl,
+//   });
 
-  res.on("finish", () => {
-    console.log("[JUDGE RESPONSE]", {
-      method: req.method,
-      path: req.originalUrl,
-      status: res.statusCode,
-      durationMs: Date.now() - startedAt,
-    });
-  });
+//   res.on("finish", () => {
+//     console.log("[JUDGE RESPONSE]", {
+//       method: req.method,
+//       path: req.originalUrl,
+//       status: res.statusCode,
+//       durationMs: Date.now() - startedAt,
+//     });
+//   });
 
-  next();
-});
+//   next();
+// });
 app.use(
   "/api/v1/judge",
   rateLimit({
     windowMs: env.JUDGE_RATE_LIMIT_WINDOW_MS,
     limit: env.JUDGE_RATE_LIMIT_MAX,
+    skip(req) {
+      const token = req.header("x-internal-service-token");
+
+      return (
+        token &&
+        token === env.INTERNAL_SERVICE_TOKEN
+      );
+    },
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {

@@ -11,25 +11,25 @@ const {
 const app = express();
 app.disable("x-powered-by");
 app.use(helmet());
-app.use((req, res, next) => {
-  const startedAt = Date.now();
+// app.use((req, res, next) => {
+//   const startedAt = Date.now();
 
-  console.log("[CONTEST REQUEST]", {
-    method: req.method,
-    path: req.originalUrl,
-  });
+//   console.log("[CONTEST REQUEST]", {
+//     method: req.method,
+//     path: req.originalUrl,
+//   });
 
-  res.on("finish", () => {
-    console.log("[CONTEST RESPONSE]", {
-      method: req.method,
-      path: req.originalUrl,
-      status: res.statusCode,
-      durationMs: Date.now() - startedAt,
-    });
-  });
+//   res.on("finish", () => {
+//     console.log("[CONTEST RESPONSE]", {
+//       method: req.method,
+//       path: req.originalUrl,
+//       status: res.statusCode,
+//       durationMs: Date.now() - startedAt,
+//     });
+//   });
 
-  next();
-});
+//   next();
+// });
 app.use(
   cors({
     origin(origin, cb) {

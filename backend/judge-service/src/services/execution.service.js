@@ -35,12 +35,32 @@ function runProcess(
       } catch {}
     };
     child.stdout.on("data", (chunk) => {
-      const next = stdout + chunk.toString();
-      if (Buffer.byteLength(next) > maxOutputBytes) {
+      if (outputLimitExceeded) {
+        return;
+      }
+
+      const currentBytes = Buffer.byteLength(stdout);
+
+      const remaining = maxOutputBytes - currentBytes;
+
+      if (remaining <= 0) {
         outputLimitExceeded = true;
-        stdout = next.slice(0, maxOutputBytes);
         kill();
-      } else stdout = next;
+        return;
+      }
+
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+
+      if (buffer.length > remaining) {
+        stdout += buffer.subarray(0, remaining).toString();
+
+        outputLimitExceeded = true;
+        kill();
+
+        return;
+      }
+
+      stdout += buffer.toString();
     });
     child.stderr.on("data", (chunk) => {
       stderr += chunk
@@ -80,7 +100,7 @@ function runProcess(
 async function compileCpp(sourcePath, exe, cwd) {
   return runProcess(
     "g++",
-    [sourcePath, "-std=gnu++20", "-O2", "-pipe", "-DONLINE_JUDGE", "-o", exe],
+    [sourcePath, "-std=gnu++20", "-O2", "-DONLINE_JUDGE", "-o", exe],
     { cwd, timeoutMs: env.COMPILE_TIMEOUT_MS, maxOutputBytes: 64 * 1024 },
   );
 }

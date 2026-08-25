@@ -22,26 +22,26 @@ app.disable("x-powered-by");
 
 app.use(helmet());
 
-app.use((req, res, next) => {
-  const startedAt = Date.now();
+// app.use((req, res, next) => {
+//   const startedAt = Date.now();
 
-  console.log("[GATEWAY REQUEST]", {
-    method: req.method,
-    path: req.originalUrl,
-    origin: req.headers.origin,
-  });
+//   console.log("[GATEWAY REQUEST]", {
+//     method: req.method,
+//     path: req.originalUrl,
+//     origin: req.headers.origin,
+//   });
 
-  res.on("finish", () => {
-    console.log("[GATEWAY RESPONSE]", {
-      method: req.method,
-      path: req.originalUrl,
-      status: res.statusCode,
-      durationMs: Date.now() - startedAt,
-    });
-  });
+//   res.on("finish", () => {
+//     console.log("[GATEWAY RESPONSE]", {
+//       method: req.method,
+//       path: req.originalUrl,
+//       status: res.statusCode,
+//       durationMs: Date.now() - startedAt,
+//     });
+//   });
 
-  next();
-});
+//   next();
+// });
 
 app.use(
   cors({

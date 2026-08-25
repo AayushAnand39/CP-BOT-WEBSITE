@@ -1,11 +1,24 @@
-FROM ubuntu:24.04
+FROM node:22-bookworm
+
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm g++ ca-certificates && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY src ./src
-RUN mkdir -p /app/runtime
 ENV NODE_ENV=production
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       g++ \
+       ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci --omit=dev
+
+COPY src ./src
+
+RUN mkdir -p /app/runtime
+
 EXPOSE 4007
-CMD ["node","src/server.js"]
+
+CMD ["node", "src/server.js"]

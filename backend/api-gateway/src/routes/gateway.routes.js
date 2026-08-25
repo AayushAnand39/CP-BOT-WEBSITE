@@ -12,41 +12,42 @@ function route(method, path, ...handlers) {
   router[method](path, ...handlers);
 }
 
+const authProxy = createServiceProxy({
+  target: env.AUTH_SERVICE_URL,
+  serviceName: "Auth Service",
+});
+
+const userProxy = createServiceProxy({
+  target: env.USER_SERVICE_URL,
+  serviceName: "User Service",
+});
+
+const problemProxy = createServiceProxy({
+  target: env.PROBLEM_SERVICE_URL,
+  serviceName: "Problem Service",
+});
+
+const contestProxy = createServiceProxy({
+  target: env.CONTEST_SERVICE_URL,
+  serviceName: "Contest Service",
+});
+
+const botProxy = createServiceProxy({
+  target: env.BOT_SERVICE_URL,
+  serviceName: "Bot Service",
+});
+
 // ---------- Auth Service ----------
 // Auth Service owns credential verification. Register/login stay public.
 // /me is protected at both the Gateway and Auth Service.
 // /verify is deliberately passed through because Auth Service returns the
 // canonical verification response for callers that want it.
-route(
-  "use",
-  "/auth",
-  authLimiter,
-  createServiceProxy({
-    target: env.AUTH_SERVICE_URL,
-    serviceName: "Auth Service"
-  })
-);
+route("use", "/auth", authLimiter, authProxy);
 
 // ---------- User Service ----------
-route(
-  "get",
-  "/users/public/:username",
-  createServiceProxy({
-    target: env.USER_SERVICE_URL,
-    serviceName: "User Service"
-  })
-);
+route("get", "/users/public/:username", userProxy);
 
-route(
-  "use",
-  "/users",
-  requireAuth,
-  createServiceProxy({
-    target: env.USER_SERVICE_URL,
-    serviceName: "User Service"
-  })
-);
-
+route("use", "/users", requireAuth, userProxy);
 
 function adminAiProxy(targetPath) {
   return createProxyMiddleware({
@@ -55,189 +56,140 @@ function adminAiProxy(targetPath) {
     pathRewrite: () => targetPath,
     on: {
       proxyReq(proxyReq, req) {
-        proxyReq.setHeader("x-admin-orchestration-token", env.ADMIN_ORCHESTRATION_TOKEN);
+        proxyReq.setHeader(
+          "x-admin-orchestration-token",
+          env.ADMIN_ORCHESTRATION_TOKEN,
+        );
         proxyReq.setHeader("x-admin-user-id", req.auth.userId);
-        if (req.auth.email) proxyReq.setHeader("x-admin-user-email", req.auth.email);
-      }
-    }
+        if (req.auth.email)
+          proxyReq.setHeader("x-admin-user-email", req.auth.email);
+      },
+    },
   });
 }
 
-route("post", "/admin/problems/import", requireAuth, requireAdmin, adminAiProxy("/api/v1/ai/admin/problems/import"));
-route("post", "/admin/problems/manual/polish", requireAuth, requireAdmin, adminAiProxy("/api/v1/ai/admin/problems/manual/polish"));
-route("post", "/admin/problems/manual/generator", requireAuth, requireAdmin, adminAiProxy("/api/v1/ai/admin/problems/manual/generator"));
-route("post", "/admin/problems/manual/testcases", requireAuth, requireAdmin, adminAiProxy("/api/v1/ai/admin/problems/manual/testcases"));
-route("post", "/admin/problems/manual/submit", requireAuth, requireAdmin, adminAiProxy("/api/v1/ai/admin/problems/manual/submit"));
-route("get", "/admin/problems/maintenance/:problemId", requireAuth, requireAdmin, (req, res, next) =>
-  adminAiProxy(`/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`)(req, res, next)
+route(
+  "post",
+  "/admin/problems/import",
+  requireAuth,
+  requireAdmin,
+  adminAiProxy("/api/v1/ai/admin/problems/import"),
 );
-route("patch", "/admin/problems/maintenance/:problemId", requireAuth, requireAdmin, (req, res, next) =>
-  adminAiProxy(`/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`)(req, res, next)
+route(
+  "post",
+  "/admin/problems/manual/polish",
+  requireAuth,
+  requireAdmin,
+  adminAiProxy("/api/v1/ai/admin/problems/manual/polish"),
 );
-route("post", "/admin/problems/maintenance/:problemId/rebuild-archive", requireAuth, requireAdmin, (req, res, next) =>
-  adminAiProxy(`/api/v1/ai/admin/problems/maintenance/${req.params.problemId}/rebuild-archive`)(req, res, next)
+route(
+  "post",
+  "/admin/problems/manual/generator",
+  requireAuth,
+  requireAdmin,
+  adminAiProxy("/api/v1/ai/admin/problems/manual/generator"),
 );
-route("post", "/admin/problems/maintenance/:problemId/regenerate-testcases", requireAuth, requireAdmin, (req, res, next) =>
-  adminAiProxy(`/api/v1/ai/admin/problems/maintenance/${req.params.problemId}/regenerate-testcases`)(req, res, next)
+route(
+  "post",
+  "/admin/problems/manual/testcases",
+  requireAuth,
+  requireAdmin,
+  adminAiProxy("/api/v1/ai/admin/problems/manual/testcases"),
+);
+route(
+  "post",
+  "/admin/problems/manual/submit",
+  requireAuth,
+  requireAdmin,
+  adminAiProxy("/api/v1/ai/admin/problems/manual/submit"),
+);
+route(
+  "get",
+  "/admin/problems/maintenance/:problemId",
+  requireAuth,
+  requireAdmin,
+  (req, res, next) =>
+    adminAiProxy(
+      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`,
+    )(req, res, next),
+);
+route(
+  "patch",
+  "/admin/problems/maintenance/:problemId",
+  requireAuth,
+  requireAdmin,
+  (req, res, next) =>
+    adminAiProxy(
+      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}`,
+    )(req, res, next),
+);
+route(
+  "post",
+  "/admin/problems/maintenance/:problemId/rebuild-archive",
+  requireAuth,
+  requireAdmin,
+  (req, res, next) =>
+    adminAiProxy(
+      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}/rebuild-archive`,
+    )(req, res, next),
+);
+route(
+  "post",
+  "/admin/problems/maintenance/:problemId/regenerate-testcases",
+  requireAuth,
+  requireAdmin,
+  (req, res, next) =>
+    adminAiProxy(
+      `/api/v1/ai/admin/problems/maintenance/${req.params.problemId}/regenerate-testcases`,
+    )(req, res, next),
 );
 
 // ---------- Problem Service ----------
 // Public catalogue is read-only through Gateway.
 // No problem mutations are exposed here.
-route(
-  "get",
-  "/problems",
-  createServiceProxy({
-    target: env.PROBLEM_SERVICE_URL,
-    serviceName: "Problem Service"
-  })
-);
+route("get", "/problems", problemProxy);
 
-route(
-  "get",
-  "/problems/:id",
-  createServiceProxy({
-    target: env.PROBLEM_SERVICE_URL,
-    serviceName: "Problem Service"
-  })
-);
+route("get", "/problems/:id", problemProxy);
 
 // ---------- Contest Service ----------
 // ---------- Bot Challenge Orchestration ----------
-route(
-  "post",
-  "/contests/challenges",
-  requireAuth,
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("post", "/contests/challenges", requireAuth, contestProxy);
 
-route(
-  "get",
-  "/contests/challenges",
-  requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
-);
+route("get", "/contests/challenges", requireAuth, contestProxy);
 
-route(
-  "get",
-  "/contests/challenges/:challengeId",
-  requireAuth,
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("get", "/contests/challenges/:challengeId", requireAuth, contestProxy);
 
-route(
-  "get",
-  "/contests",
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("get", "/contests", contestProxy);
 
-route(
-  "get",
-  "/contests/:id",
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("get", "/contests/:id", contestProxy);
 
-route(
-  "get",
-  "/contests/:id/problems/:problemId",
-  requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
-);
+route("get", "/contests/:id/problems/:problemId", requireAuth, contestProxy);
 
-route(
-  "get",
-  "/contests/:id/activity",
-  requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
-);
+route("get", "/contests/:id/activity", requireAuth, contestProxy);
 
-route(
-  "get",
-  "/contests/:id/standings",
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("get", "/contests/:id/standings", contestProxy);
 
-route(
-  "post",
-  "/contests/:id/join",
-  requireAuth,
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("post", "/contests/:id/join", requireAuth, contestProxy);
 
-route(
-  "post",
-  "/contests/:id/run-samples",
-  requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
-);
+route("post", "/contests/:id/run-samples", requireAuth, contestProxy);
 
-route(
-  "post",
-  "/contests/:id/run",
-  requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
-);
+route("post", "/contests/:id/run", requireAuth, contestProxy);
 
 route(
   "get",
   "/contests/:id/submissions/:submissionId",
   requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
+  contestProxy,
 );
 
-route(
-  "post",
-  "/contests/:id/submissions",
-  requireAuth,
-  createServiceProxy({
-    target: env.CONTEST_SERVICE_URL,
-    serviceName: "Contest Service"
-  })
-);
+route("post", "/contests/:id/submissions", requireAuth, contestProxy);
 
-route(
-  "post",
-  "/contests/:id/finish",
-  requireAuth,
-  createServiceProxy({ target: env.CONTEST_SERVICE_URL, serviceName: "Contest Service" })
-);
+route("post", "/contests/:id/finish", requireAuth, contestProxy);
 
 // ---------- Bot Service ----------
 // Browser may browse/select bots. Bot creation/simulation is internal.
-route(
-  "get",
-  "/bots",
-  createServiceProxy({
-    target: env.BOT_SERVICE_URL,
-    serviceName: "Bot Service"
-  })
-);
+route("get", "/bots", botProxy);
 
-route(
-  "get",
-  "/bots/:id",
-  createServiceProxy({
-    target: env.BOT_SERVICE_URL,
-    serviceName: "Bot Service"
-  })
-);
+route("get", "/bots/:id", botProxy);
 
 module.exports = router;
