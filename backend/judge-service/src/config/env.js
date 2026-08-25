@@ -14,8 +14,8 @@ const schema = z.object({
   MAX_TESTS_PER_SUBMISSION: z.coerce.number().int().positive().max(1000).default(100),
   MAX_INPUT_BYTES_PER_TEST: z.coerce.number().int().positive().default(104857600),
   MAX_OUTPUT_BYTES_PER_TEST: z.coerce.number().int().positive().default(1048576),
-  COMPILE_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
-  EXECUTION_TIMEOUT_MS: z.coerce.number().int().positive().default(3000),
+  COMPILE_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
+  EXECUTION_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
   TRUST_PROXY: z.enum(["true","false"]).default("true")
 });
 const parsed = schema.safeParse(process.env);
