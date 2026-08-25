@@ -60,6 +60,9 @@ const adminMaintenanceProxy = createProxyMiddleware({
 
   on: {
     proxyReq(proxyReq, req) {
+      proxyReq.removeHeader("origin");
+      proxyReq.removeHeader("access-control-request-method");
+      proxyReq.removeHeader("access-control-request-headers");
       proxyReq.setHeader(
         "x-admin-orchestration-token",
         env.ADMIN_ORCHESTRATION_TOKEN,
@@ -71,6 +74,16 @@ const adminMaintenanceProxy = createProxyMiddleware({
         proxyReq.setHeader("x-admin-user-email", req.auth.email);
       }
     },
+    proxyRes(proxyRes, req) {
+      const origin = req.headers.origin;
+      const allowed = env.CORS_ORIGINS.split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+      if (origin && allowed.includes(origin)) {
+        proxyRes.headers["access-control-allow-origin"] = origin;
+        proxyRes.headers.vary = "Origin";
+      }
+    },
   },
 });
 
@@ -79,7 +92,10 @@ const adminMaintenanceProxy = createProxyMiddleware({
 // /me is protected at both the Gateway and Auth Service.
 // /verify is deliberately passed through because Auth Service returns the
 // canonical verification response for callers that want it.
-route("use", "/auth", authLimiter, authProxy);
+route("post", "/auth/register", authLimiter, authProxy);
+route("post", "/auth/login", authLimiter, authProxy);
+route("post", "/auth/verify", authProxy);
+route("get", "/auth/me", requireAuth, authProxy);
 
 // ---------- User Service ----------
 route("get", "/users/public/:username", userProxy);
@@ -90,11 +106,14 @@ function adminAiProxy(targetPath) {
   return createProxyMiddleware({
     target: env.AI_SERVICE_URL,
     changeOrigin: true,
-    // proxyTimeout: env.REQUEST_TIMEOUT_MS,
-    // timeout: env.REQUEST_TIMEOUT_MS,
+    proxyTimeout: env.REQUEST_TIMEOUT_MS,
+    timeout: env.REQUEST_TIMEOUT_MS,
     pathRewrite: () => targetPath,
     on: {
       proxyReq(proxyReq, req) {
+        proxyReq.removeHeader("origin");
+        proxyReq.removeHeader("access-control-request-method");
+        proxyReq.removeHeader("access-control-request-headers");
         proxyReq.setHeader(
           "x-admin-orchestration-token",
           env.ADMIN_ORCHESTRATION_TOKEN,
@@ -102,6 +121,16 @@ function adminAiProxy(targetPath) {
         proxyReq.setHeader("x-admin-user-id", req.auth.userId);
         if (req.auth.email)
           proxyReq.setHeader("x-admin-user-email", req.auth.email);
+      },
+      proxyRes(proxyRes, req) {
+        const origin = req.headers.origin;
+        const allowed = env.CORS_ORIGINS.split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+        if (origin && allowed.includes(origin)) {
+          proxyRes.headers["access-control-allow-origin"] = origin;
+          proxyRes.headers.vary = "Origin";
+        }
       },
     },
   });

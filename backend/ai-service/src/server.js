@@ -5,6 +5,9 @@ const server = app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`AI Service listening on port ${env.PORT}`);
 });
 
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 125000;
+
 function shutdown(signal) {
   console.log(`${signal} received. Shutting down...`);
   server.close(() => process.exit(0));

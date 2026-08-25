@@ -1,6 +1,28 @@
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const { env } = require("../config/env");
 
+const allowedOrigins = env.CORS_ORIGINS.split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+function applyCorsHeaders(headers, req) {
+  const origin = req.headers.origin;
+  if (!origin || !allowedOrigins.includes(origin)) return;
+
+  headers["access-control-allow-origin"] = origin;
+  const vary = headers.vary;
+  if (!vary) headers.vary = "Origin";
+  else if (
+    !String(vary)
+      .toLowerCase()
+      .split(",")
+      .map((v) => v.trim())
+      .includes("origin")
+  ) {
+    headers.vary = `${vary}, Origin`;
+  }
+}
+
 function createServiceProxy({ target, serviceName }) {
   return createProxyMiddleware({
     target,
@@ -9,21 +31,31 @@ function createServiceProxy({ target, serviceName }) {
     proxyTimeout: env.REQUEST_TIMEOUT_MS,
     timeout: env.REQUEST_TIMEOUT_MS,
 
-    // Forward the exact public API path the frontend requested. Each
-    // downstream service already exposes the same /api/v1/<service> prefix.
     pathRewrite(_path, req) {
       return req.originalUrl;
     },
 
     on: {
       proxyReq(proxyReq, req) {
-        if (req.id) {
-          proxyReq.setHeader("x-request-id", req.id);
-        }
+        if (req.id) proxyReq.setHeader("x-request-id", req.id);
 
-        // Never leak the gateway's own internals/service token because this
-        // process does not possess or need the internal service token.
+        // Browser CORS is enforced at the API Gateway. Do not forward the
+        // browser Origin to downstream services, otherwise each microservice
+        // independently runs CORS checks and can reject an otherwise valid
+        // Gateway request in production.
+        proxyReq.removeHeader("origin");
+        proxyReq.removeHeader("access-control-request-method");
+        proxyReq.removeHeader("access-control-request-headers");
+
+        // Public Gateway traffic must never be able to impersonate an
+        // authenticated internal-service request.
         proxyReq.removeHeader("x-internal-service-token");
+      },
+
+      proxyRes(proxyRes, req) {
+        // Ensure proxied responses retain the Gateway's browser-facing CORS
+        // contract even when the downstream service returns an error.
+        applyCorsHeaders(proxyRes.headers, req);
       },
 
       error(err, req, res) {
@@ -52,24 +84,14 @@ function createServiceProxy({ target, serviceName }) {
           requestId: req.id,
         });
 
-        const allowedOrigins = env.CORS_ORIGINS.split(",")
-          .map((value) => value.trim())
-          .filter(Boolean);
-
-        const origin = req.headers.origin;
-
         res.statusCode = 502;
         res.setHeader("Content-Type", "application/json");
         res.setHeader("Content-Length", Buffer.byteLength(payload));
 
-        console.log("[PROXY CORS DEBUG]", {
-          origin,
-          allowedOrigins,
-        });
-
-        if (origin && allowedOrigins.includes(origin)) {
-          res.setHeader("Access-Control-Allow-Origin", origin);
-          res.setHeader("Vary", "Origin");
+        const responseHeaders = {};
+        applyCorsHeaders(responseHeaders, req);
+        for (const [name, value] of Object.entries(responseHeaders)) {
+          res.setHeader(name, value);
         }
 
         res.end(payload);
@@ -78,6 +100,4 @@ function createServiceProxy({ target, serviceName }) {
   });
 }
 
-module.exports = {
-  createServiceProxy,
-};
+module.exports = { createServiceProxy };

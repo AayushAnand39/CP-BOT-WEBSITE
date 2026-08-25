@@ -1,13 +1,25 @@
 const app = require("./app");
 const { env } = require("./config/env");
-const { connectDatabase, disconnectDatabase } = require("./services/db.service");
-const { recoverContestEndTimers, shutdownContestEndScheduler } = require("./services/contest-end-scheduler.service");
+const {
+  connectDatabase,
+  disconnectDatabase,
+} = require("./services/db.service");
+const {
+  recoverContestEndTimers,
+  shutdownContestEndScheduler,
+} = require("./services/contest-end-scheduler.service");
 async function start() {
   try {
     await connectDatabase();
     await recoverContestEndTimers();
-    const server = app.listen(env.PORT, "0.0.0.0", () => console.log(`Contest Service listening on port ${env.PORT}`));
-    const shutdown = signal => {
+    const server = app.listen(env.PORT, "0.0.0.0", () =>
+      console.log(`Contest Service listening on port ${env.PORT}`),
+    );
+
+    // Keep idle upstream connections stable behind managed reverse proxies.
+    server.keepAliveTimeout = 120000;
+    server.headersTimeout = 125000;
+    const shutdown = (signal) => {
       console.log(`${signal} received. Shutting down...`);
       shutdownContestEndScheduler();
       server.close(async () => {

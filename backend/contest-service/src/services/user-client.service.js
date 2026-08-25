@@ -44,7 +44,10 @@ async function applyChallengeResult({
     return body.data;
   } catch (error) {
     if (error instanceof AppError) throw error;
-    console.error("[AUTH -> USER ERROR]", {
+    if (error?.name === "AbortError") {
+      throw new AppError(504, "User Service timed out", "USER_SERVICE_TIMEOUT");
+    }
+    console.error("[CONTEST -> USER ERROR]", {
       url: env.USER_SERVICE_URL,
       name: error?.name,
       message: error?.message,

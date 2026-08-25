@@ -8,9 +8,9 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: "Too many requests. Please try again later.",
-    code: "RATE_LIMITED"
-  }
+    message: "Gateway global rate limit exceeded. Please try again later.",
+    code: "GATEWAY_RATE_LIMITED",
+  },
 });
 
 const authLimiter = rateLimit({
@@ -18,14 +18,16 @@ const authLimiter = rateLimit({
   limit: env.AUTH_RATE_LIMIT_MAX,
   standardHeaders: "draft-8",
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: {
     success: false,
-    message: "Too many authentication requests. Please try again later.",
-    code: "AUTH_RATE_LIMITED"
-  }
+    message:
+      "Gateway authentication rate limit exceeded. Please try again later.",
+    code: "GATEWAY_AUTH_RATE_LIMITED",
+  },
 });
 
 module.exports = {
   globalLimiter,
-  authLimiter
+  authLimiter,
 };

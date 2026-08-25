@@ -11,6 +11,10 @@ async function start() {
     const server = app.listen(env.PORT, "0.0.0.0", () =>
       console.log(`User Service listening on port ${env.PORT}`),
     );
+
+    // Keep idle upstream connections stable behind managed reverse proxies.
+    server.keepAliveTimeout = 120000;
+    server.headersTimeout = 125000;
     const shutdown = (signal) => {
       console.log(`${signal} received. Shutting down...`);
       server.close(async () => {

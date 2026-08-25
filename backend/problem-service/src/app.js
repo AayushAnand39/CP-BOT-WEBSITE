@@ -36,6 +36,10 @@ app.use(
   rateLimit({
     windowMs: env.PROBLEM_RATE_LIMIT_WINDOW_MS,
     limit: env.PROBLEM_RATE_LIMIT_MAX,
+    skip(req) {
+      const token = req.header("x-internal-service-token");
+      return Boolean(token && token === env.INTERNAL_SERVICE_TOKEN);
+    },
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {

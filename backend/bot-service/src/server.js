@@ -1,7 +1,13 @@
 const app = require("./app");
 const { env } = require("./config/env");
-const { connectDatabase, disconnectDatabase } = require("./services/db.service");
-const { recoverLiveSimulationRuns, shutdownLiveScheduler } = require("./services/live-scheduler.service");
+const {
+  connectDatabase,
+  disconnectDatabase,
+} = require("./services/db.service");
+const {
+  recoverLiveSimulationRuns,
+  shutdownLiveScheduler,
+} = require("./services/live-scheduler.service");
 
 async function start() {
   try {
@@ -11,6 +17,10 @@ async function start() {
     const server = app.listen(env.PORT, "0.0.0.0", () => {
       console.log(`Bot Service listening on port ${env.PORT}`);
     });
+
+    // Keep idle upstream connections stable behind managed reverse proxies.
+    server.keepAliveTimeout = 120000;
+    server.headersTimeout = 125000;
 
     async function shutdown(signal) {
       console.log(`${signal} received. Shutting down...`);

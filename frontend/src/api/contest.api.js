@@ -43,7 +43,9 @@ export async function runCode(contestId, payload) {
   return response.data.data.result;
 }
 export async function getSubmission(contestId, submissionId) {
-  const response = await api.get(`/api/v1/contests/${contestId}/submissions/${submissionId}`);
+  const response = await api.get(
+    `/api/v1/contests/${contestId}/submissions/${submissionId}`,
+  );
   return response.data.data.submission;
 }
 
@@ -51,10 +53,15 @@ export async function submitCode(contestId, payload) {
   const response = await api.post(
     `/api/v1/contests/${contestId}/submissions`,
     payload,
+    { timeout: 600000 },
   );
   return response.data.data.submission;
 }
 export async function finishContest(contestId) {
-  const response = await api.post(`/api/v1/contests/${contestId}/finish`);
+  const response = await api.post(
+    `/api/v1/contests/${contestId}/finish`,
+    undefined,
+    { timeout: 300000 },
+  );
   return response.data.data;
 }

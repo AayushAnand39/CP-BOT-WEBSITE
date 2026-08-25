@@ -24,6 +24,20 @@ async function getTests(jobId) {
     return body.data?.tests || body.tests || [];
   } catch (error) {
     if (error instanceof AppError) throw error;
+    if (error?.name === "AbortError") {
+      throw new AppError(
+        504,
+        "Testcase Service timed out",
+        "TESTCASE_SERVICE_TIMEOUT",
+      );
+    }
+    console.error("[CONTEST -> TESTCASE NETWORK ERROR]", {
+      jobId,
+      url: env.TESTCASE_SERVICE_URL,
+      name: error?.name,
+      message: error?.message,
+      cause: error?.cause,
+    });
     throw new AppError(
       502,
       "Testcase Service unavailable",
