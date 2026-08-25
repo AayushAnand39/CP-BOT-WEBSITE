@@ -28,9 +28,9 @@ const envSchema = z.object({
     .number()
     .int()
     .positive()
-    .default(15 * 60 * 1000),
+    .default(60 * 1000),
 
-  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
 
   TRUST_PROXY: z.enum(["true", "false"]).default("true"),
 });
