@@ -32,6 +32,7 @@ function createServiceProxy({ target, serviceName }) {
           target,
           method: req.method,
           path: req.originalUrl,
+          origin: req.headers.origin,
           code: err?.code,
           message: err?.message,
           requestId: req.id,
@@ -51,23 +52,26 @@ function createServiceProxy({ target, serviceName }) {
           requestId: req.id,
         });
 
-        const origin = req.headers.origin;
-
         const allowedOrigins = env.CORS_ORIGINS.split(",")
           .map((value) => value.trim())
           .filter(Boolean);
 
-        const headers = {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload),
-        };
+        const origin = req.headers.origin;
+
+        res.statusCode = 502;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Content-Length", Buffer.byteLength(payload));
+
+        console.log("[PROXY CORS DEBUG]", {
+          origin,
+          allowedOrigins,
+        });
 
         if (origin && allowedOrigins.includes(origin)) {
-          headers["Access-Control-Allow-Origin"] = origin;
-          headers["Vary"] = "Origin";
+          res.setHeader("Access-Control-Allow-Origin", origin);
+          res.setHeader("Vary", "Origin");
         }
 
-        res.writeHead(502, headers);
         res.end(payload);
       },
     },
