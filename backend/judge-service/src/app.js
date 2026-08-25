@@ -32,6 +32,25 @@ app.use((req, res, next) => {
 app.get("/health", (_req, res) =>
   res.json({ success: true, service: "judge-service", status: "ok" }),
 );
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+
+  console.log("[JUDGE REQUEST]", {
+    method: req.method,
+    path: req.originalUrl,
+  });
+
+  res.on("finish", () => {
+    console.log("[JUDGE RESPONSE]", {
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt,
+    });
+  });
+
+  next();
+});
 app.use(
   "/api/v1/judge",
   rateLimit({
