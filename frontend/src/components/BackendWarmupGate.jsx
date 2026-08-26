@@ -1,96 +1,64 @@
 import { useEffect, useState } from "react";
-
 import { warmupBackend } from "../api/system.api";
+
+const MAX_ATTEMPTS = 6;
+const RETRY_DELAY_MS = 5000;
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function BackendWarmupGate({ children }) {
   const [state, setState] = useState("warming");
-
   const [services, setServices] = useState([]);
-
-  const [error, setError] = useState(null);
-
   const [attempt, setAttempt] = useState(1);
+  const [lastError, setLastError] = useState(null);
 
-  async function startBackend() {
+  async function runWarmup(isCancelled = () => false) {
     setState("warming");
-    setError(null);
+    setLastError(null);
 
-    for (let currentAttempt = 1; currentAttempt <= 3; currentAttempt++) {
+    for (
+      let currentAttempt = 1;
+      currentAttempt <= MAX_ATTEMPTS;
+      currentAttempt++
+    ) {
+      if (isCancelled()) return;
+
       setAttempt(currentAttempt);
 
       try {
         const result = await warmupBackend();
 
+        if (isCancelled()) return;
+
         setServices(result.services || []);
 
-        if (result.success) {
+        if (result.ready) {
           setState("ready");
           return;
         }
-      } catch (err) {
-        console.warn(`[FRONTEND WARMUP] attempt ${currentAttempt} failed`, err);
+      } catch (error) {
+        if (isCancelled()) return;
 
-        setError(err);
+        console.warn(
+          `[FRONTEND WARMUP] attempt ${currentAttempt} failed`,
+          error,
+        );
+        setLastError(error);
+      }
 
-        if (currentAttempt < 3) {
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-        }
+      if (currentAttempt < MAX_ATTEMPTS) {
+        await wait(RETRY_DELAY_MS);
       }
     }
 
-    setState("failed");
+    if (!isCancelled()) {
+      setState("failed");
+    }
   }
 
   useEffect(() => {
     let cancelled = false;
-
-    async function initialize() {
-      setState("warming");
-
-      for (let currentAttempt = 1; currentAttempt <= 3; currentAttempt++) {
-        if (cancelled) {
-          return;
-        }
-
-        setAttempt(currentAttempt);
-
-        try {
-          const result = await warmupBackend();
-
-          if (cancelled) {
-            return;
-          }
-
-          setServices(result.services || []);
-
-          if (result.success) {
-            setState("ready");
-            return;
-          }
-        } catch (err) {
-          if (cancelled) {
-            return;
-          }
-
-          console.warn(
-            `[FRONTEND WARMUP] attempt ${currentAttempt} failed`,
-            err,
-          );
-
-          setError(err);
-        }
-
-        if (currentAttempt < 3) {
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-        }
-      }
-
-      if (!cancelled) {
-        setState("failed");
-      }
-    }
-
-    initialize();
+    runWarmup(() => cancelled);
 
     return () => {
       cancelled = true;
@@ -102,16 +70,37 @@ export default function BackendWarmupGate({ children }) {
   }
 
   if (state === "failed") {
+    const notReady = services.filter(
+      (service) => service.required && !service.ready,
+    );
+
     return (
       <main className="page-center">
         <div>
-          <h2>Backend services could not start</h2>
+          <h2>Some backend services are still unavailable</h2>
 
-          <p>The free backend services may still be waking up.</p>
+          {notReady.length > 0 ? (
+            <p>
+              Waiting for: {notReady.map((service) => service.name).join(", ")}
+            </p>
+          ) : (
+            <p>The backend did not finish warming up in time.</p>
+          )}
 
-          <button className="primary-button" onClick={startBackend}>
-            Retry
-          </button>
+          {lastError && <p>{lastError?.message || "Warmup request failed."}</p>}
+
+          <div className="modal-actions">
+            <button className="primary-button" onClick={() => runWarmup()}>
+              Retry startup
+            </button>
+
+            <button
+              className="secondary-button"
+              onClick={() => setState("ready")}
+            >
+              Continue anyway
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -123,17 +112,21 @@ export default function BackendWarmupGate({ children }) {
         <h2>Starting CP Bot services...</h2>
 
         <p>
-          The backend is waking up after inactivity. This may take up to a
-          minute.
+          Free backend services are waking up after inactivity. The first load
+          can take around a minute.
         </p>
 
-        <p>Warmup attempt {attempt} of 3</p>
+        <p>
+          Warmup attempt {attempt} of {MAX_ATTEMPTS}
+        </p>
 
         {services.length > 0 && (
           <div>
             {services.map((service) => (
               <div key={service.name}>
                 {service.ready ? "✓" : "○"} {service.name}
+                {!service.required ? " (optional)" : ""}
+                {service.status ? ` — HTTP ${service.status}` : ""}
               </div>
             ))}
           </div>
