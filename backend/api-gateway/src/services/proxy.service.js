@@ -53,9 +53,26 @@ function createServiceProxy({ target, serviceName }) {
       },
 
       proxyRes(proxyRes, req) {
-        // Ensure proxied responses retain the Gateway's browser-facing CORS
-        // contract even when the downstream service returns an error.
         applyCorsHeaders(proxyRes.headers, req);
+
+        // Diagnostic headers visible in browser DevTools.
+        proxyRes.headers["x-cpbot-upstream-service"] = serviceName;
+
+        proxyRes.headers["x-cpbot-upstream-status"] = String(
+          proxyRes.statusCode,
+        );
+
+        if (proxyRes.statusCode >= 400) {
+          console.warn("[GATEWAY UPSTREAM RESPONSE]", {
+            service: serviceName,
+            target,
+            method: req.method,
+            path: req.originalUrl,
+            upstreamStatus: proxyRes.statusCode,
+            requestId: req.id,
+            cfRay: req.header("cf-ray"),
+          });
+        }
       },
 
       error(err, req, res) {

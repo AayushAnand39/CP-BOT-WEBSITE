@@ -29,6 +29,26 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  const cfRay = req.header("cf-ray");
+
+  res.setHeader(
+    "x-cpbot-service",
+    "bot-service"
+  );
+
+  console.log("[BOT INBOUND]", {
+    method: req.method,
+    path: req.originalUrl,
+    cfRay,
+    forwardedFor:
+      req.header("x-forwarded-for"),
+    time: new Date().toISOString(),
+  });
+
+  next();
+});
+
 app.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
