@@ -37,19 +37,24 @@ function createServiceProxy({ target, serviceName }) {
 
     on: {
       proxyReq(proxyReq, req) {
-        if (req.id) proxyReq.setHeader("x-request-id", req.id);
+        if (req.id) {
+          proxyReq.setHeader("x-request-id", req.id);
+        }
 
-        // Browser CORS is enforced at the API Gateway. Do not forward the
-        // browser Origin to downstream services, otherwise each microservice
-        // independently runs CORS checks and can reject an otherwise valid
-        // Gateway request in production.
         proxyReq.removeHeader("origin");
+
         proxyReq.removeHeader("access-control-request-method");
+
         proxyReq.removeHeader("access-control-request-headers");
 
-        // Public Gateway traffic must never be able to impersonate an
-        // authenticated internal-service request.
         proxyReq.removeHeader("x-internal-service-token");
+
+        // Do not propagate the browser -> Cloudflare ->
+        // Render proxy chain into another public Render service.
+        proxyReq.removeHeader("x-forwarded-for");
+        proxyReq.removeHeader("x-forwarded-host");
+        proxyReq.removeHeader("x-forwarded-proto");
+        proxyReq.removeHeader("forwarded");
       },
 
       proxyRes(proxyRes, req) {

@@ -49,15 +49,70 @@ if (parsed.data.NODE_ENV === "production") {
     AI_SERVICE_URL: parsed.data.AI_SERVICE_URL,
   };
 
+  function normalizeUrl(value) {
+    return value.replace(/\/+$/, "").toLowerCase();
+  }
+
+  const gatewayUrl =
+    process.env.RENDER_EXTERNAL_URL
+      ? normalizeUrl(process.env.RENDER_EXTERNAL_URL)
+      : null;
+
+  const seen = new Map();
+
   for (const [name, value] of Object.entries(serviceUrls)) {
-    const host = new URL(value).hostname.toLowerCase();
-    if (["localhost", "127.0.0.1", "::1"].includes(host)) {
+    const normalized = normalizeUrl(value);
+    const url = new URL(value);
+
+    if (
+      ["localhost", "127.0.0.1", "::1"].includes(
+        url.hostname.toLowerCase()
+      )
+    ) {
       console.error(
-        `Production configuration error: ${name} points to ${value}`,
+        `[CONFIG ERROR] ${name} points to localhost: ${value}`
       );
+
       process.exit(1);
     }
+
+    // Prevent Gateway -> Gateway recursion.
+    if (gatewayUrl && normalized === gatewayUrl) {
+      console.error(
+        `[CONFIG ERROR] ${name} points back to API Gateway: ${value}`
+      );
+
+      process.exit(1);
+    }
+
+    // Catch accidentally duplicated service URLs.
+    if (seen.has(normalized)) {
+      console.error(
+        `[CONFIG ERROR] ${name} and ${seen.get(
+          normalized
+        )} point to the same URL: ${value}`
+      );
+
+      process.exit(1);
+    }
+
+    seen.set(normalized, name);
   }
+
+  console.log("[GATEWAY UPSTREAM CONFIG]", {
+    AUTH_SERVICE_URL:
+      parsed.data.AUTH_SERVICE_URL,
+    USER_SERVICE_URL:
+      parsed.data.USER_SERVICE_URL,
+    PROBLEM_SERVICE_URL:
+      parsed.data.PROBLEM_SERVICE_URL,
+    CONTEST_SERVICE_URL:
+      parsed.data.CONTEST_SERVICE_URL,
+    BOT_SERVICE_URL:
+      parsed.data.BOT_SERVICE_URL,
+    AI_SERVICE_URL:
+      parsed.data.AI_SERVICE_URL,
+  });
 }
 
 module.exports = {
