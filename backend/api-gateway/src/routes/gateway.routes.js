@@ -4,6 +4,7 @@ const { requireAuth } = require("../middleware/auth.middleware");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const { createServiceProxy } = require("../services/proxy.service");
 const { requireAdmin } = require("../middleware/admin.middleware");
+const { warmup } = require("../controllers/system.controller");
 
 const router = express.Router();
 
@@ -85,6 +86,8 @@ const adminMaintenanceProxy = createProxyMiddleware({
     },
   },
 });
+
+route("get", "/system/warmup", warmup);
 
 // ---------- Auth Service ----------
 // Auth Service owns credential verification. Register/login stay public.
