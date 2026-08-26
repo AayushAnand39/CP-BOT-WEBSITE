@@ -151,9 +151,9 @@ export default function ContestPage() {
     loadContest();
     loadStandings();
     loadActivity();
-    const contestPoll = setInterval(loadContest, 5000);
-    const standingsPoll = setInterval(loadStandings, 3000);
-    const activityPoll = setInterval(loadActivity, 2000);
+    const contestPoll = setInterval(loadContest, 15000);
+    const standingsPoll = setInterval(loadStandings, 10000);
+    const activityPoll = setInterval(loadActivity, 5000);
     return () => {
       clearInterval(contestPoll);
       clearInterval(standingsPoll);

@@ -5,7 +5,7 @@ const helmet = require("helmet");
 const { env, corsOrigins } = require("./config/env");
 const requestIdMiddleware = require("./middleware/request-id.middleware");
 const blockInternalRoutes = require("./middleware/internal-block.middleware");
-const { globalLimiter } = require("./middleware/rate-limit.middleware");
+// const { globalLimiter } = require("./middleware/rate-limit.middleware");
 const gatewayRoutes = require("./routes/gateway.routes");
 const {
   notFoundHandler,
@@ -60,7 +60,7 @@ app.use(
 app.options(/.*/, cors());
 
 app.use(requestIdMiddleware);
-app.use(globalLimiter);
+// app.use(globalLimiter);
 
 // Do not install express.json() globally before the proxy.
 // The proxy forwards the original request stream/body directly.

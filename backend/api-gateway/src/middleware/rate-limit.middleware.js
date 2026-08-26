@@ -73,21 +73,21 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
   limit: env.AUTH_RATE_LIMIT_MAX,
-  keyGenerator: rateLimitKey,
+
   skip(req) {
     return req.method === "OPTIONS";
   },
+
   standardHeaders: "draft-8",
   legacyHeaders: false,
 
-  // Only failed authentication attempts remain charged against the bucket.
   skipSuccessfulRequests: true,
 
-  handler: blockedHandler(
-    "GATEWAY_AUTH_RATE_LIMITED",
-    "Gateway authentication rate limit exceeded. Please try again later.",
-    "auth",
-  ),
+  message: {
+    success: false,
+    message: "Too many failed authentication attempts. Please try again shortly.",
+    code: "GATEWAY_AUTH_RATE_LIMITED",
+  },
 });
 
 module.exports = {

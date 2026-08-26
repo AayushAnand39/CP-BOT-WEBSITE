@@ -52,7 +52,7 @@ app.get("/health", (_req, res) =>
     status: "ok",
   }),
 );
-app.use("/api/v1/users", limiter, routes);
+app.use("/api/v1/users", routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 module.exports = app;
