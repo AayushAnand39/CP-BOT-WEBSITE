@@ -175,6 +175,32 @@ export default function BackendWarmupGate({ children }) {
     };
   }, [initializeBackend]);
 
+  useEffect(() => {
+    // Start keep-alive only after initial warmup succeeds.
+    if (state !== "ready") {
+      return;
+    }
+
+    console.log("[KEEPALIVE] Starting 10-minute service keep-alive");
+
+    const interval = setInterval(
+      () => {
+        console.log("[KEEPALIVE] Waking backend services");
+
+        wakeBackendServices().catch((error) => {
+          console.warn("[KEEPALIVE] Wake request failed", error);
+        });
+      },
+      10 * 60 * 1000,
+    );
+
+    return () => {
+      console.log("[KEEPALIVE] Stopping service keep-alive");
+
+      clearInterval(interval);
+    };
+  }, [state]);
+
   /*
    * Backend is ready.
    *
