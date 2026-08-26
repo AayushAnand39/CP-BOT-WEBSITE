@@ -1,8 +1,8 @@
 {
-  "name": "cp-bot-user-service",
+  "name": "cp-bot-auth-service",
   "version": "1.0.0",
   "private": true,
-  "description": "User profile and statistics microservice for the CP Bot Platform",
+  "description": "Authentication microservice for the CP Bot Platform",
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
@@ -13,18 +13,17 @@
     "prisma:deploy": "prisma migrate deploy"
   },
   "dependencies": {
-    "@prisma/client": "^6.14.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
-    "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "zod": "^4.0.15"
+    "zod": "^4.0.15",
+    "@prisma/client": "^6.14.0"
   },
   "devDependencies": {
-    "prisma": "^6.14.0",
-    "supertest": "^7.2.2"
+    "prisma": "^6.14.0"
   },
   "engines": {
     "node": ">=20"

@@ -7,8 +7,6 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4007),
   INTERNAL_SERVICE_TOKEN: z.string().min(32),
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
-  JUDGE_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
-  JUDGE_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   JUDGE_WORK_DIR: z.string().default("./runtime"),
   MAX_CODE_BYTES: z.coerce.number().int().positive().default(1000000),
   MAX_TESTS_PER_SUBMISSION: z.coerce.number().int().positive().max(1000).default(100),

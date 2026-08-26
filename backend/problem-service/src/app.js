@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { env, corsOrigins } = require("./config/env");
 const routes = require("./routes/problem.routes");
@@ -31,25 +30,7 @@ app.use((req, res, next) => {
 app.get("/health", (_q, s) =>
   s.json({ success: true, service: "problem-service", status: "ok" }),
 );
-app.use(
-  "/api/v1/problems",
-  rateLimit({
-    windowMs: env.PROBLEM_RATE_LIMIT_WINDOW_MS,
-    limit: env.PROBLEM_RATE_LIMIT_MAX,
-    skip(req) {
-      const token = req.header("x-internal-service-token");
-      return Boolean(token && token === env.INTERNAL_SERVICE_TOKEN);
-    },
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    message: {
-      success: false,
-      message: "Too many problem-service requests. Please try again later.",
-      code: "PROBLEM_RATE_LIMITED",
-    },
-  }),
-  routes,
-);
+app.use("/api/v1/problems", routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 module.exports = app;

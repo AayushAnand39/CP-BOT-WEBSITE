@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { env, corsOrigins } = require("./config/env");
 const judgeRoutes = require("./routes/judge.routes");
@@ -51,29 +50,7 @@ app.get("/health", (_req, res) =>
 
 //   next();
 // });
-app.use(
-  "/api/v1/judge",
-  rateLimit({
-    windowMs: env.JUDGE_RATE_LIMIT_WINDOW_MS,
-    limit: env.JUDGE_RATE_LIMIT_MAX,
-    skip(req) {
-      const token = req.header("x-internal-service-token");
-
-      return (
-        token &&
-        token === env.INTERNAL_SERVICE_TOKEN
-      );
-    },
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    message: {
-      success: false,
-      message: "Too many judging requests. Please try again later.",
-      code: "JUDGE_RATE_LIMITED",
-    },
-  }),
-  judgeRoutes,
-);
+app.use("/api/v1/judge", judgeRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 module.exports = app;

@@ -10,7 +10,6 @@ process.env.USER_SERVICE_URL = "http://127.0.0.1:4102";
 process.env.PROBLEM_SERVICE_URL = "http://127.0.0.1:4103";
 process.env.CONTEST_SERVICE_URL = "http://127.0.0.1:4104";
 process.env.BOT_SERVICE_URL = "http://127.0.0.1:4105";
-process.env.GLOBAL_RATE_LIMIT_MAX = "10000";
 
 const app = require("../src/app");
 
