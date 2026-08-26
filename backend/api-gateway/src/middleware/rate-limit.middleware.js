@@ -58,6 +58,9 @@ const globalLimiter = rateLimit({
   windowMs: env.GLOBAL_RATE_LIMIT_WINDOW_MS,
   limit: env.GLOBAL_RATE_LIMIT_MAX,
   keyGenerator: rateLimitKey,
+  skip(req) {
+    return req.method === "OPTIONS";
+  },
   standardHeaders: "draft-8",
   legacyHeaders: false,
   handler: blockedHandler(
@@ -71,6 +74,9 @@ const authLimiter = rateLimit({
   windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
   limit: env.AUTH_RATE_LIMIT_MAX,
   keyGenerator: rateLimitKey,
+  skip(req) {
+    return req.method === "OPTIONS";
+  },
   standardHeaders: "draft-8",
   legacyHeaders: false,
 
