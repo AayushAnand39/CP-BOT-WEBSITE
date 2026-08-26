@@ -57,7 +57,7 @@ app.use(
     credentials: false
   })
 );
-app.options("*", cors());
+app.options(/.*/, cors());
 
 app.use(requestIdMiddleware);
 app.use(globalLimiter);
